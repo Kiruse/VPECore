@@ -23,8 +23,8 @@ Transform2D{T}(location::Vector2, rotation::Number, scale::Vector2) where T = Tr
 Transform2D{T}(parent::Optional{AbstractTransform2D}) where T = Transform2D{T}(parent, Vector2(0, 0), T(0), Vector2(1, 1))
 Transform2D{T}() where T = Transform2D{T}(nothing)
 
-translate!(transform::AbstractTransform, offset)   = (transform.dirty = true; transform.location += offset)
-scale!(    transform::AbstractTransform, scale)    = (transform.dirty = true; transform.scale = transform.scale .* scale)
+translate!(transform::AbstractTransform, offset)  = (transform.dirty = true; transform.location .+= offset)
+scale!(    transform::AbstractTransform, scale)   = (transform.dirty = true; transform.scale = transform.scale .* scale)
 rotate!(transform::AbstractTransform2D, rotation) = (transform.dirty = true; transform.rotation += rotation)
 
 function parent!(child::AbstractTransform, parent::AbstractTransform)
@@ -38,7 +38,7 @@ function parent!(child::AbstractTransform, parent::AbstractTransform)
 end
 function deparent!(child::AbstractTransform)
     if child.parent !== nothing
-        delete!(child.parent.children, child)
+        deleteat!(child.parent.children, findfirst(curr->curr==child, child.parent.children))
         child.parent = nothing
         child.dirty  = true
     end
