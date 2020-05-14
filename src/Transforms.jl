@@ -23,7 +23,7 @@ Transform2D{T}(location::Vector2, rotation::Number, scale::Vector2) where T = Tr
 Transform2D{T}(parent::Optional{AbstractTransform2D}) where T = Transform2D{T}(parent, Vector2(0, 0), T(0), Vector2(1, 1))
 Transform2D{T}() where T = Transform2D{T}(nothing)
 
-translate!(transform::AbstractTransform, offset)  = (transform.dirty = true; transform.location .+= offset)
+translate!(transform::AbstractTransform, offset)  = (transform.dirty = true; transform.location = transform.location .+ offset)
 scale!(    transform::AbstractTransform, scale)   = (transform.dirty = true; transform.scale = transform.scale .* scale)
 rotate!(transform::AbstractTransform2D, rotation) = (transform.dirty = true; transform.rotation += rotation)
 
