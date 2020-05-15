@@ -11,5 +11,6 @@ include("./Tickability.jl")
 include("./Transforms.jl")
 include("./Worlds.jl")
 include("./LoopUtils.jl")
+include("./AABBs.jl")
 
 end # module VPECore
