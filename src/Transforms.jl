@@ -78,3 +78,12 @@ getcustomdata(T::Type, transform::AbstractTransform) = getcustomdata(T, transfor
 
 transformfamily(::Type{<:Transform2D}) = Transform2D
 transformparam( ::Type{<:AbstractTransform{T}}) where T = T
+
+
+function Base.show(io::IO, transform::AbstractTransform)
+    write(io, "$(typeof(transform))(loc: $(transform.location), rot: $(transform.rotation), scale: $(transform.scale)")
+    if transform.dirty
+        write(io, ", dirty")
+    end
+    write(io, ")")
+end
