@@ -1,7 +1,7 @@
 name = "VPECore"
 uuid = "5faf8420-954d-11ea-1ef5-31742fe3d6f6"
 authors = ["Kiruse <neurokiruse@outlook.com>"]
-version = "0.1.2"
+version = "0.1.3"
 
 [deps]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
