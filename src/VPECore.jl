@@ -6,11 +6,13 @@ using StaticArrays
 export tick!
 
 include("./SigUtils.jl")
+
+include("./AABBs.jl")
+include("./EventDispatcher.jl")
 include("./LinAl.jl")
+include("./LoopUtils.jl")
 include("./Tickability.jl")
 include("./Transforms.jl")
 include("./Worlds.jl")
-include("./LoopUtils.jl")
-include("./AABBs.jl")
 
 end # module VPECore
