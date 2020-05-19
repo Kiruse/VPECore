@@ -3,7 +3,7 @@ using Base.Threads
 using LinearAlgebra
 using StaticArrays
 
-export tick!
+export tick!, update!
 
 include("./SigUtils.jl")
 

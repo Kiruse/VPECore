@@ -1,5 +1,5 @@
 export AbstractTransform, Transform2D, World
-export update, obj2world, world2obj, translate!, rotate!, scale!, parent!, deparent!, getcustomdata, transformfamily, transformparam
+export obj2world, world2obj, translate!, rotate!, scale!, parent!, deparent!, getcustomdata, transformfamily, transformparam
 
 abstract type AbstractTransform{T<:Number} end
 abstract type AbstractTransform2D{T} <: AbstractTransform{T} end
@@ -27,6 +27,10 @@ translate!(transform::AbstractTransform, offset)  = (transform.dirty = true; tra
 scale!(    transform::AbstractTransform, scale)   = (transform.dirty = true; transform.scale = transform.scale .* scale)
 rotate!(transform::AbstractTransform2D, rotation) = (transform.dirty = true; transform.rotation += rotation)
 
+setlocation!(transform::AbstractTransform, location) = (transform.dirty = true; transform.location = location)
+setscale!(   transform::AbstractTransform, scale)    = (transform.dirty = true; transform.scale    = scale)
+setrotation!(transform::AbstractTransform, rotation) = (transform.dirty = true; transform.rotation = rotation)
+
 function parent!(child::AbstractTransform, parent::AbstractTransform)
     if child.parent != parent
         deparent!(child)
@@ -45,7 +49,7 @@ function deparent!(child::AbstractTransform)
     child
 end
 
-function update(transform::Transform2D{T}, parentmat::Matrix3{T} = idmat(Matrix3{T}), forceupdate::Bool = false) where T
+function update!(transform::Transform2D{T}, parentmat::Matrix3{T} = idmat(Matrix3{T}), forceupdate::Bool = false) where T
     if transform.dirty || forceupdate
         l = transform.location
         sx, sy = transform.scale
