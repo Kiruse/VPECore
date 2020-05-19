@@ -20,8 +20,9 @@ function Transform2D{T}(parent::AbstractTransform2D, location::Vector2, rotation
 end
 Transform2D{T}(parent::Nothing, location::Vector2, rotation::Number, scale::Vector2) where T = Transform2D{T}(nothing, Vector(), location, rotation, scale, true, idmat(Matrix3{T}), idmat(Matrix3{T}), nothing)
 Transform2D{T}(location::Vector2, rotation::Number, scale::Vector2) where T = Transform2D{T}(nothing, location, rotation, scale)
-Transform2D{T}(parent::Optional{AbstractTransform2D}) where T = Transform2D{T}(parent, Vector2(0, 0), T(0), Vector2(1, 1))
+Transform2D{T}(parent::Optional{AbstractTransform2D{T}}) where T = Transform2D{T}(parent, Vector2(0, 0), T(0), Vector2(1, 1))
 Transform2D{T}() where T = Transform2D{T}(nothing)
+Transform2D() = Transform2D{Float64}()
 
 translate!(transform::AbstractTransform, offset)  = (transform.dirty = true; transform.location = transform.location .+ offset)
 scale!(    transform::AbstractTransform, scale)   = (transform.dirty = true; transform.scale = transform.scale .* scale)
@@ -30,6 +31,23 @@ rotate!(transform::AbstractTransform2D, rotation) = (transform.dirty = true; tra
 setlocation!(transform::AbstractTransform, location) = (transform.dirty = true; transform.location = location)
 setscale!(   transform::AbstractTransform, scale)    = (transform.dirty = true; transform.scale    = scale)
 setrotation!(transform::AbstractTransform, rotation) = (transform.dirty = true; transform.rotation = rotation)
+
+function change!(transform::Transform2D{T}, location::Vector2{T}, rotation::T, scale::Vector2{T}) where T
+    transform.location = location
+    transform.rotation = rotation
+    transform.scale    = scale
+    transform.dirty = true
+    transform
+end
+function change!(transform::Transform2D{T}; location::Optional{Vector2{T}} = nothing, rotation::Optional{T} = nothing, scale::Optional{Vector2{T}} = nothing) where T
+    if location !== nothing || rotation !== nothing || scale !== nothing
+        transform.dirty = true
+        
+        if location !== nothing transform.location = location end
+        if rotation !== nothing transform.rotation = rotation end
+        if scale    !== nothing transform.scale    = scale    end
+    end
+end
 
 function parent!(child::AbstractTransform, parent::AbstractTransform)
     if child.parent != parent
