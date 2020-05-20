@@ -1,5 +1,6 @@
 export AbstractTransform, Transform2D, World
 export obj2world, world2obj, translate!, rotate!, scale!, parent!, deparent!, getcustomdata, transformfamily, transformparam
+export translationmatrix3, rotationmatrix3, scalematrix3, transformmatrix3
 
 abstract type AbstractTransform{T<:Number} end
 abstract type AbstractTransform2D{T} <: AbstractTransform{T} end
@@ -69,29 +70,32 @@ end
 
 function update!(transform::Transform2D{T}, parentmat::Matrix3{T} = idmat(Matrix3{T}), forceupdate::Bool = false) where T
     if transform.dirty || forceupdate
-        l = transform.location
-        sx, sy = transform.scale
-        cosr = cos(transform.rotation)
-        sinr = sin(transform.rotation)
-        
-        transform.obj2world = parentmat * Matrix3{T}([
-             sx*cosr sx*sinr  l[1];
-            -sy*sinr sy*cosr  l[2];
-                0       0       1
-        ])
+        transform.obj2world = parentmat * transformmatrix3(T, transform.location, transform.rotation, transform.scale)
         transform.world2obj = inv(transform.obj2world)
         
         forceupdate     = true
         transform.dirty = false
     end
     @threads for child ∈ transform.children
-        update(child, transform.obj2world, forceupdate)
+        update!(child, transform.obj2world, forceupdate)
     end
-    nothing
+    transform
 end
 
 obj2world(transform::AbstractTransform) = transform.obj2world
 world2obj(transform::AbstractTransform) = transform.world2obj
+
+translationmatrix3(T::Type{<:Real}, location) = Matrix3{T}(1, 0, 0, 0, 1, 0, location[1], location[2], 1)
+rotationmatrix3(   T::Type{<:Real}, rotation) = (sinr = sin(rotation); cosr = cos(rotation); Matrix3{T}(cosr, -sinr, 0, sinr, cosr, 0, 0, 0, 1))
+scalematrix3(      T::Type{<:Real}, scale)    = Matrix3{T}(scale[1], 0, 0, 0, scale[2], 0, 0, 0, 1)
+
+function transformmatrix3(T::Type{<:Real}, location, rotation, scale)
+    lx, ly = location
+    sx, sy = scale
+    cosr = cos(rotation)
+    sinr = sin(rotation)
+    Matrix3{T}(sx*cosr, -sx*sinr, 0, sy*sinr, sy*cosr, 0, lx, ly, 1)
+end
 
 
 getcustomdata(::Type, _) = nothing

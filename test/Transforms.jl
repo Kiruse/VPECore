@@ -1,15 +1,14 @@
 using Test
 
-include("../src/VPEWorlds.jl")
-using .VPEWorlds
-const Transform2D = VPEWorlds.Transform2D{Float64}
+include("../src/VPECore.jl")
+using .VPECore
 
 function test_transform2d_scenegraph()
-    parent = Transform2D()
-    c1 = Transform2D(parent)
-    c2 = Transform2D(parent)
-    c1_1 = Transform2D(c1)
-    c1_2 = Transform2D(c1)
+    parent = Transform2D{Float64}()
+    c1 = Transform2D{Float64}(parent)
+    c2 = Transform2D{Float64}(parent)
+    c1_1 = Transform2D{Float64}(c1)
+    c1_2 = Transform2D{Float64}(c1)
     
     @assert parent.parent == nothing
     @assert length(parent.children) == 2
@@ -32,13 +31,13 @@ function test_transform2d_scenegraph()
 end
 
 function test_transform2d_update()
-    world  = World{Transform2D}()
-    parent = Transform2D(Vector2(10, 10), deg2rad(45), Vector2(2, 2))
-    c1   = Transform2D(parent, Vector2(5,  0),           0, Vector2(1, 1))
-    c1_1 = Transform2D(c1,     Vector2(0, -5),           0, Vector2(1, 1))
-    c1_2 = Transform2D(c1,     Vector2(5,  0), deg2rad(45), Vector2(1, 1))
+    world  = World{Transform2D{Float64}}()
+    parent = Transform2D{Float64}(Vector2(10, 10), deg2rad(45), Vector2(2, 2))
+    c1   = Transform2D{Float64}(parent, Vector2(5,  0),           0, Vector2(1, 1))
+    c1_1 = Transform2D{Float64}(c1,     Vector2(0, -5),           0, Vector2(1, 1))
+    c1_2 = Transform2D{Float64}(c1,     Vector2(5,  0), deg2rad(45), Vector2(1, 1))
     push!(world, parent)
-    update(world)
+    tick!(world, 0.0)
     
     trig45 = cos(deg2rad(45))
     expected_parent_mat = Matrix3([
@@ -76,7 +75,7 @@ function test_transform2d_update()
 end
 
 function test_transform2d_transform()
-    t1 = Transform2D()
+    t1 = Transform2D{Float64}()
     rad45 = deg2rad(45)
     translate!(t1, Vector2(50, 0))
     rotate!(   t1, deg2rad(45))
@@ -85,7 +84,7 @@ function test_transform2d_transform()
     @assert isapprox(t1.rotation, rad45, atol=1e-5)
     @assert isapprox(t1.scale,    Vector2{Float64}(1.5, 1.5), atol=1e-5)
     
-    update(t1)
+    update!(t1)
     sinr = sin(deg2rad(45))
     cosr = cos(deg2rad(45))
     expected = Matrix3{Float64}(1, 0, 0, 0, 1, 0, 50, 0, 1) * Matrix3{Float64}(cosr, -sinr, 0, sinr, cosr, 0, 0, 0, 1) * Matrix3{Float64}(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1)
@@ -93,7 +92,7 @@ function test_transform2d_transform()
     return true
 end
 
-@testset "VPEWorlds" begin
+@testset "VPECore Transform" begin
     @test test_transform2d_scenegraph()
     @test test_transform2d_update()
     @test test_transform2d_transform()

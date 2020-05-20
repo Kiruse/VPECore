@@ -16,7 +16,7 @@ del_tickable( ::Tickable, world::World, tickable) = (delete!(world.tickables, ti
 
 function tick!(world::World, dt::AbstractFloat)
     @threads for root ∈ world.roots
-        update(root)
+        update!(root)
     end
     foreach(tickable->tick!(tickable, dt), world.tickables)
     world
