@@ -2,6 +2,7 @@ module VPECore
 using Base.Threads
 using LinearAlgebra
 using StaticArrays
+using GetSetProp
 
 export tick!, update!, change!
 

@@ -25,13 +25,15 @@ Transform2D{T}(parent::Optional{AbstractTransform2D{T}}) where T = Transform2D{T
 Transform2D{T}() where T = Transform2D{T}(nothing)
 Transform2D() = Transform2D{Float64}()
 
-translate!(transform::AbstractTransform, offset)  = (transform.dirty = true; transform.location = transform.location .+ offset)
-scale!(    transform::AbstractTransform, scale)   = (transform.dirty = true; transform.scale = transform.scale .* scale)
-rotate!(transform::AbstractTransform2D, rotation) = (transform.dirty = true; transform.rotation += rotation)
+@generate_properties Transform2D begin
+    @set location = (self.dirty = true; self.location = value)
+    @set rotation = (self.dirty = true; self.rotation = value)
+    @set scale    = (self.dirty = true; self.scale    = value)
+end
 
-setlocation!(transform::AbstractTransform, location) = (transform.dirty = true; transform.location = location)
-setscale!(   transform::AbstractTransform, scale)    = (transform.dirty = true; transform.scale    = scale)
-setrotation!(transform::AbstractTransform, rotation) = (transform.dirty = true; transform.rotation = rotation)
+translate!(transform::AbstractTransform, offset)  = transform.location = transform.location .+ offset
+scale!(    transform::AbstractTransform, scale)   = transform.scale = transform.scale .* scale
+rotate!(transform::AbstractTransform2D, rotation) = transform.rotation += rotation
 
 function change!(transform::Transform2D{T}, location::Vector2{T}, rotation::T, scale::Vector2{T}) where T
     transform.location = location
