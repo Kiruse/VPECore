@@ -53,6 +53,10 @@ function change!(transform::Transform2D{T}; location::Optional{Vector2{T}} = not
 end
 
 function parent!(child::AbstractTransform, parent::AbstractTransform)
+    if child == parent
+        throw(ArgumentError("Cannot parent transform to itself"))
+    end
+    
     if child.parent != parent
         deparent!(child)
         push!(parent.children, child)
