@@ -27,7 +27,7 @@ relative(value) = MeasureValue{typeof(value), RelativeMeasure}(value)
 
 resolvemeasure(value::MeasureValue{T, AbsoluteMeasure}, _::Real) where T = value.value
 resolvemeasure(value::MeasureValue{T, RelativeMeasure}, parentmeasure::Real) where T = value.value * parentmeasure
-resolvemeasure(measure::Measure{N}, parentmeasures) where N = tuple((resolvemeasure(measure.values[i].value, parentmeasures[i]) for i ∈ 1:N)...)
+resolvemeasure(measure::Measure{N}, parentmeasures) where N = tuple((resolvemeasure(measure.values[i], parentmeasures[i]) for i ∈ 1:N)...)
 
 measurevalueparam(::MeasureValue{T}) where T = T
 measurevalueinterpret(::MeasureValue{T, I}) where {T, I} = I
@@ -51,3 +51,6 @@ function Base.show(io::IO, measure::Measure{N, T}) where {N, T}
     end
     write(io, ']')
 end
+
+Base.convert(M::Type{Measure{N, T}}, measure::Measure{N}) where {N, T} = M(measure.values...)
+Base.convert(M::Type{Measure{N, I}}, measure::Measure{N, F}) where {N, I<:Integer, F<:AbstractFloat} = M((MeasureValue{I, measurevalueinterpret(value)}(floor(I, value.value)) for value ∈ measure.values)...)
