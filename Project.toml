@@ -1,7 +1,7 @@
 name = "VPECore"
 uuid = "5faf8420-954d-11ea-1ef5-31742fe3d6f6"
 authors = ["Kiruse <neurokiruse@outlook.com>"]
-version = "0.1.6"
+version = "0.1.7"
 
 [deps]
 GetSetProp = "9e064dca-da72-4c7f-9df9-c28c42900063"
