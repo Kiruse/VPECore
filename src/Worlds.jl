@@ -3,11 +3,14 @@ export World
 struct World{T<:AbstractTransform}
     roots::Vector{T}
     tickables::Set
+    listeners::ListenersType
 end # World
-World{T}() where T = World{T}(Vector(), Set())
+World{T}() where T = World{T}(Vector(), Set(), ListenersType())
+eventlisteners(world::World) = world.listeners
+eventdispatcherness(::Type{World}) = IsEventDispatcher()
 
-Base.push!(  world::World{T}, transform::T) where {T<:AbstractTransform} = (push!(  world.roots, transform); world)
-Base.delete!(world::World{T}, transform::T) where {T<:AbstractTransform} = (delete!(world.roots, transform); world)
+Base.push!(  world::World{T}, transform::T) where {T<:AbstractTransform} = (push!(  world.roots, transform); emit(world, :RootAdded,   transform); world)
+Base.delete!(world::World{T}, transform::T) where {T<:AbstractTransform} = (delete!(world.roots, transform); emit(world, :RootRemoved, transform); world)
 
 Base.push!(  world::World, tickable::T)  where T = push_tickable(tickability(T), world, tickable)
 Base.delete!(world::World, tickable::T)  where T = del_tickable( tickability(T), world, tickable)

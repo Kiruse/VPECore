@@ -7,9 +7,9 @@ using GetSetProp
 export tick!, update!, change!
 
 include("./SigUtils.jl")
+include("./EventDispatcher.jl")
 
 include("./AABBs.jl")
-include("./EventDispatcher.jl")
 include("./LinAl.jl")
 include("./LoopUtils.jl")
 include("./Measures.jl")
