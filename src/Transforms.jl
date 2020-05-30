@@ -1,12 +1,15 @@
-export AbstractTransform, Transform2D, World
+######################################################################
+# Abstract scene graph through transforms.
+# A transform may be associated with arbitrary "customdata" in order to link back to a higher level abstraction.
+# TODO: 
+
+export Transform2D
 export obj2world, world2obj, translate!, rotate!, scale!, parent!, deparent!, getcustomdata, transformfamily, transformparam
 export translationmatrix3, rotationmatrix3, scalematrix3, transformmatrix3
 
-abstract type AbstractTransform{T<:Number} end
-abstract type AbstractTransform2D{T} <: AbstractTransform{T} end
-
 mutable struct Transform2D{T} <: AbstractTransform2D{T}
     parent::Optional{<:AbstractTransform2D{T}}
+    world::Optional{<:AbstractWorld{<:AbstractTransform2D{T}}}
     children::Vector{AbstractTransform2D{T}}
     location::Vector2{T}
     rotation::T
@@ -17,9 +20,9 @@ mutable struct Transform2D{T} <: AbstractTransform2D{T}
     customdata::Any
 end # Transform2D
 function Transform2D{T}(parent::AbstractTransform2D, location::Vector2, rotation::Number, scale::Vector2) where T
-    parent!(Transform2D{T}(nothing, Vector(), Vector2{T}(location...), T(rotation), Vector2{T}(scale...), true, idmat(Matrix3{T}), idmat(Matrix3{T}), nothing), parent)
+    parent!(Transform2D{T}(nothing, nothing, Vector(), Vector2{T}(location...), T(rotation), Vector2{T}(scale...), true, idmat(Matrix3{T}), idmat(Matrix3{T}), nothing), parent)
 end
-Transform2D{T}(parent::Nothing, location::Vector2, rotation::Number, scale::Vector2) where T = Transform2D{T}(nothing, Vector(), location, rotation, scale, true, idmat(Matrix3{T}), idmat(Matrix3{T}), nothing)
+Transform2D{T}(parent::Nothing, location::Vector2, rotation::Number, scale::Vector2) where T = Transform2D{T}(nothing, nothing, Vector(), location, rotation, scale, true, idmat(Matrix3{T}), idmat(Matrix3{T}), nothing)
 Transform2D{T}(location::Vector2, rotation::Number, scale::Vector2) where T = Transform2D{T}(nothing, location, rotation, scale)
 Transform2D{T}(parent::Optional{AbstractTransform2D{T}}) where T = Transform2D{T}(parent, Vector2(0, 0), T(0), Vector2(1, 1))
 Transform2D{T}() where T = Transform2D{T}(nothing)
@@ -58,14 +61,33 @@ function parent!(child::AbstractTransform, parent::AbstractTransform)
     end
     
     if child.parent != parent
-        deparent!(child)
+        emitworldevents = child.world != parent.world
+        oldworld        = child.world
+        
+        deparent_internal!(child)
         push!(parent.children, child)
         child.parent = parent
+        child.world  = child.parent.world
         child.dirty  = true
+        
+        if child.world !== nothing && child ∈ child.world.roots
+            rem_root(child.world, child)
+            emit(child.world, :DemoteRoot)
+        elseif emitworldevents
+            emit(oldworld, :RemoveChild, child)
+            emit(child.world, :AddChild, child)
+        end
     end
     child
 end
 function deparent!(child::AbstractTransform)
+    if child.parent !== nothing
+        oldworld = child.world
+        deparent_internal!(child)
+        emit(oldworld, :ElementRemoved, child)
+    end
+end
+function deparent_internal!(child::AbstractTransform)
     if child.parent !== nothing
         deleteat!(child.parent.children, findfirst(curr->curr==child, child.parent.children))
         child.parent = nothing
