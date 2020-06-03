@@ -4,7 +4,7 @@
 # TODO: 
 
 export Transform2D
-export obj2world, world2obj, translate!, rotate!, scale!, parent!, deparent!
+export obj2world, world2obj, translate!, rotate!, scale!, parent!, deparent!, parentof, childrenof
 export transformof, transformfamily, transformchaintype, transformparam
 export translationmatrix3, rotationmatrix3, scalematrix3, transformmatrix3
 
@@ -134,6 +134,10 @@ function unworld!(elem)
     foreach(unworld!, transform.children)
 end
 
+parentof(x) = transformof(x).parent
+childrenof(x) = transformof(x).children
+childrenof(T::Type, x) = filter(c->isa(c, T), childrenof(x))
+
 function update!(transform::Transform2D{E, T}, parentmat::Matrix3{T} = idmat(Matrix3{T}), forceupdate::Bool = false) where {E, T}
     if transform.dirty || forceupdate
         transform.obj2world = parentmat * transformmatrix3(T, transform.location, transform.rotation, transform.scale)
@@ -143,7 +147,7 @@ function update!(transform::Transform2D{E, T}, parentmat::Matrix3{T} = idmat(Mat
         transform.dirty = false
     end
     @threads for child ∈ transform.children
-        update!(child, transform.obj2world, forceupdate)
+        update!(transformof(child), transform.obj2world, forceupdate)
     end
     transform
 end
