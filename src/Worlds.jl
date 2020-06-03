@@ -23,7 +23,7 @@ this is not a concern of the World.
 
 Developer's note: AddRoot and RemoveRoot are emitted directly within this file. The other events are emitted within Transforms.jl.
 """
-struct World{T<:AbstractTransform} <: AbstractWorld{T}
+struct World{T} <: AbstractWorld{T}
     roots::Vector{T}
     tickables::Set
     listeners::ListenersType
@@ -32,20 +32,35 @@ World{T}() where T = World{T}(Vector(), Set(), ListenersType())
 eventlisteners(world::World) = world.listeners
 eventdispatcherness(::Type{World}) = IsEventDispatcher()
 
-function Base.push!(world::World{T}, transform::T) where {T<:AbstractTransform}
-    add_root(world, transform)
-    transform.world = world
-    emit(world, :AddRoot,    transform)
+function Base.push!(world::World{T}, root::T) where T
+    tf = transformof(root)
+    add_root(world, root)
+    tf.world = world
+    emit(world, :AddRoot, root)
+    for child ∈ tf.children
+        setworld!(child, world)
+    end
     world
 end
-function Base.delete!(world::World{T}, transform::T) where {T<:AbstractTransform}
-    rem_root( world, transform)
-    transform.world = nothing
-    emit(world, :RemoveRoot, transform)
+function Base.delete!(world::World{T}, root::T) where T
+    if rem_root(world, root)
+        tf = transformof(root)
+        tf.world = nothing
+        foreach(unworld!, tf.children)
+        emit(world, :RemoveRoot, root)
+    end
     world
 end
-add_root(world::World{T}, transform::T) where {T<:AbstractTransform} = push!(  world.roots, transform)
-rem_root( world::World{T}, transform::T) where {T<:AbstractTransform} = delete!(world.roots, transform)
+add_root(world::World{T}, root::T) where T = push!(world.roots, root)
+function rem_root(world::World{T}, root::T) where T
+    idx = findfirst(r->r==root, world.roots)
+    if idx !== nothing
+        deleteat!(world.roots, idx)
+        true
+    else
+        false
+    end
+end
 
 Base.push!(  world::World, tickable::T) where T = push_tickable(tickability(T), world, tickable)
 Base.delete!(world::World, tickable::T) where T = del_tickable( tickability(T), world, tickable)

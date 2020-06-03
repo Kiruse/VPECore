@@ -7,26 +7,24 @@ export Transform2D
 export obj2world, world2obj, translate!, rotate!, scale!, parent!, deparent!, getcustomdata, transformfamily, transformparam
 export translationmatrix3, rotationmatrix3, scalematrix3, transformmatrix3
 
-mutable struct Transform2D{T} <: AbstractTransform2D{T}
-    parent::Optional{<:AbstractTransform2D{T}}
-    world::Optional{<:AbstractWorld{<:AbstractTransform2D{T}}}
-    children::Vector{AbstractTransform2D{T}}
+mutable struct Transform2D{E, T} <: AbstractTransform2D{E, T}
+    world::Optional{<:AbstractWorld{<:E}}
+    parent::Optional{E}
+    children::Vector{E}
     location::Vector2{T}
     rotation::T
     scale::Vector2{T}
     dirty::Bool
     obj2world::Matrix3{T}
     world2obj::Matrix3{T}
-    customdata::Any
 end # Transform2D
-function Transform2D{T}(parent::AbstractTransform2D, location::Vector2, rotation::Number, scale::Vector2) where T
-    parent!(Transform2D{T}(nothing, nothing, Vector(), Vector2{T}(location...), T(rotation), Vector2{T}(scale...), true, idmat(Matrix3{T}), idmat(Matrix3{T}), nothing), parent)
+function Transform2D{E, T}(parent::E, location::Vector2, rotation::Number, scale::Vector2) where {E, T}
+    parent!(Transform2D{E, T}(nothing, nothing, Vector(), Vector2{T}(location...), T(rotation), Vector2{T}(scale...), true, idmat(Matrix3{T}), idmat(Matrix3{T})), parent)
 end
-Transform2D{T}(parent::Nothing, location::Vector2, rotation::Number, scale::Vector2) where T = Transform2D{T}(nothing, nothing, Vector(), location, rotation, scale, true, idmat(Matrix3{T}), idmat(Matrix3{T}), nothing)
-Transform2D{T}(location::Vector2, rotation::Number, scale::Vector2) where T = Transform2D{T}(nothing, location, rotation, scale)
-Transform2D{T}(parent::Optional{AbstractTransform2D{T}}) where T = Transform2D{T}(parent, Vector2(0, 0), T(0), Vector2(1, 1))
-Transform2D{T}() where T = Transform2D{T}(nothing)
-Transform2D() = Transform2D{Float64}()
+Transform2D{E, T}(parent::Nothing, location::Vector2, rotation::Number, scale::Vector2) where {E, T} = Transform2D{E, T}(nothing, nothing, Vector(), location, rotation, scale, true, idmat(Matrix3{T}), idmat(Matrix3{T}))
+Transform2D{E, T}(location::Vector2, rotation::Number, scale::Vector2) where {E, T} = Transform2D{E, T}(nothing, location, rotation, scale)
+Transform2D{E, T}(parent::Optional{AbstractTransform2D{E, T}}) where {E, T} = Transform2D{E, T}(parent, Vector2(0, 0), T(0), Vector2(1, 1))
+Transform2D{E, T}() where {E, T} = Transform2D{E, T}(nothing)
 
 @generate_properties Transform2D begin
     @set location = (self.dirty = true; self.location = value)
@@ -38,14 +36,14 @@ translate!(transform::AbstractTransform, offset)  = transform.location = transfo
 scale!(    transform::AbstractTransform, scale)   = transform.scale = transform.scale .* scale
 rotate!(transform::AbstractTransform2D, rotation) = transform.rotation += rotation
 
-function change!(transform::Transform2D{T}, location::Vector2{T}, rotation::T, scale::Vector2{T}) where T
+function change!(transform::Transform2D{E, T}, location::Vector2{T}, rotation::T, scale::Vector2{T}) where {E, T}
     transform.location = location
     transform.rotation = rotation
     transform.scale    = scale
     transform.dirty = true
     transform
 end
-function change!(transform::Transform2D{T}; location::Optional{Vector2{T}} = nothing, rotation::Optional{T} = nothing, scale::Optional{Vector2{T}} = nothing) where T
+function change!(transform::Transform2D{E, T}; location::Optional{Vector2{T}} = nothing, rotation::Optional{T} = nothing, scale::Optional{Vector2{T}} = nothing) where {E, T}
     if location !== nothing || rotation !== nothing || scale !== nothing
         transform.dirty = true
         
@@ -55,48 +53,87 @@ function change!(transform::Transform2D{T}; location::Optional{Vector2{T}} = not
     end
 end
 
-function parent!(child::AbstractTransform, parent::AbstractTransform)
-    if child == parent
-        throw(ArgumentError("Cannot parent transform to itself"))
-    end
+parent!(child, parent) = do_parent!(child, parent)
+function do_parent!(child, parent)
+    childtf  = transformof(child)
+    parenttf = transformof(parent)
     
-    if child.parent != parent
-        emitworldevents = child.world != parent.world
-        oldworld        = child.world
-        
-        deparent_internal!(child)
-        push!(parent.children, child)
-        child.parent = parent
-        child.world  = child.parent.world
-        child.dirty  = true
-        
-        if child.world !== nothing && child ∈ child.world.roots
-            rem_root(child.world, child)
-            emit(child.world, :DemoteRoot)
-        elseif emitworldevents
+    oldworld = childtf.world
+    emitevents = childtf.world != parenttf.world
+    
+    res = parent_internal!(child, parent)
+    if res
+        if childtf.world !== nothing && childtf ∈ childtf.world.roots
+            rem_root(childtf.world, child)
+            emit(childtf.world, :DemoteRoot, child)
+        elseif emitevents
             emit(oldworld, :RemoveChild, child)
-            emit(child.world, :AddChild, child)
+            emit(childtf.world, :AddChild, child)
+            for child ∈ childtf.children
+                setworld!(child, childtf.world)
+            end
         end
     end
     child
 end
-function deparent!(child::AbstractTransform)
-    if child.parent !== nothing
-        oldworld = child.world
+function parent_internal!(child, parent)
+    if child == parent
+        throw(ArgumentError("Cannot parent transform to itself"))
+    end
+    
+    childtf  = transformof(child)
+    parenttf = transformof(parent)
+    
+    if childtf.parent != parent
         deparent_internal!(child)
-        emit(oldworld, :ElementRemoved, child)
+        push!(parenttf.children, child)
+        childtf.parent = parent
+        childtf.world  = parenttf.world
+        childtf.dirty  = true
+        true
+    else
+        false
     end
 end
-function deparent_internal!(child::AbstractTransform)
-    if child.parent !== nothing
-        deleteat!(child.parent.children, findfirst(curr->curr==child, child.parent.children))
-        child.parent = nothing
-        child.dirty  = true
+deparent!(child) = do_deparent!(child)
+function do_deparent!(child)
+    tf = transformof(child)
+    if tf.parent !== nothing
+        oldworld = child.world
+        deparent_internal!(child)
+        emit(oldworld, :RemoveChild, child)
+        foreach(unworld!, tf.children)
     end
     child
 end
+function deparent_internal!(child)
+    childtf = transformof(child)
+    
+    if childtf.parent !== nothing
+        deleteat!(childtf.parent.children, findfirst(curr->curr==child, childtf.parent.children))
+        childtf.parent = nothing
+        childtf.dirty  = true
+    end
+    
+    child
+end
+function setworld!(elem, world::AbstractWorld)
+    transform = transformof(elem)
+    transform.world = world
+    emit(world, :AddChild, elem)
+    for child ∈ transform.children
+        setworld!(child, world)
+    end
+end
+function unworld!(elem)
+    transform = transformof(elem)
+    world = transform.world
+    transform.world = nothing
+    emit(world, :RemoveChild, elem)
+    foreach(unworld!, transform.children)
+end
 
-function update!(transform::Transform2D{T}, parentmat::Matrix3{T} = idmat(Matrix3{T}), forceupdate::Bool = false) where T
+function update!(transform::Transform2D{E, T}, parentmat::Matrix3{T} = idmat(Matrix3{T}), forceupdate::Bool = false) where {E, T}
     if transform.dirty || forceupdate
         transform.obj2world = parentmat * transformmatrix3(T, transform.location, transform.rotation, transform.scale)
         transform.world2obj = inv(transform.obj2world)
@@ -110,6 +147,8 @@ function update!(transform::Transform2D{T}, parentmat::Matrix3{T} = idmat(Matrix
     transform
 end
 
+obj2world(x) = obj2world(transformof(x))
+world2obj(x) = world2obj(transformof(x))
 obj2world(transform::AbstractTransform) = transform.obj2world
 world2obj(transform::AbstractTransform) = transform.world2obj
 
@@ -126,12 +165,11 @@ function transformmatrix3(T::Type{<:Real}, location, rotation, scale)
 end
 
 
-getcustomdata(::Type, _) = nothing
-getcustomdata(::Type{T}, inst::T) where T = inst
-getcustomdata(T::Type, transform::AbstractTransform) = getcustomdata(T, transform.customdata)
-
+transformof(x) = nothing
+transformof(x::AbstractTransform) = x
 transformfamily(::Type{<:Transform2D}) = Transform2D
-transformparam( ::Type{<:AbstractTransform{T}}) where T = T
+transformchaintype(::Type{<:AbstractTransform{E}}) where E = E
+transformparam(::Type{<:AbstractTransform{E, T}}) where {E, T} = T
 
 
 function Base.show(io::IO, transform::AbstractTransform)

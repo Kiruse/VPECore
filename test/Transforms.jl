@@ -1,14 +1,15 @@
+push!(LOAD_PATH, "$(@__DIR__)/..")
 using Test
+using VPECore
 
-include("../src/VPECore.jl")
-using .VPECore
+const TransformT = Transform2D{Transform2D, Float64}
 
 function test_transform2d_scenegraph()
-    parent = Transform2D{Float64}()
-    c1 = Transform2D{Float64}(parent)
-    c2 = Transform2D{Float64}(parent)
-    c1_1 = Transform2D{Float64}(c1)
-    c1_2 = Transform2D{Float64}(c1)
+    parent = TransformT()
+    c1 = TransformT(parent)
+    c2 = TransformT(parent)
+    c1_1 = TransformT(c1)
+    c1_2 = TransformT(c1)
     
     @assert parent.parent == nothing
     @assert length(parent.children) == 2
@@ -31,11 +32,11 @@ function test_transform2d_scenegraph()
 end
 
 function test_transform2d_update()
-    world  = World{Transform2D{Float64}}()
-    parent = Transform2D{Float64}(Vector2(10, 10), deg2rad(45), Vector2(2, 2))
-    c1   = Transform2D{Float64}(parent, Vector2(5,  0),           0, Vector2(1, 1))
-    c1_1 = Transform2D{Float64}(c1,     Vector2(0, -5),           0, Vector2(1, 1))
-    c1_2 = Transform2D{Float64}(c1,     Vector2(5,  0), deg2rad(45), Vector2(1, 1))
+    world  = World{TransformT}()
+    parent = TransformT(Vector2(10, 10), deg2rad(45), Vector2(2, 2))
+    c1   = TransformT(parent, Vector2(5,  0),           0, Vector2(1, 1))
+    c1_1 = TransformT(c1,     Vector2(0, -5),           0, Vector2(1, 1))
+    c1_2 = TransformT(c1,     Vector2(5,  0), deg2rad(45), Vector2(1, 1))
     push!(world, parent)
     tick!(world, 0.0)
     
@@ -75,7 +76,7 @@ function test_transform2d_update()
 end
 
 function test_transform2d_transform()
-    t1 = Transform2D{Float64}()
+    t1 = TransformT()
     rad45 = deg2rad(45)
     translate!(t1, Vector2(50, 0))
     rotate!(   t1, deg2rad(45))
