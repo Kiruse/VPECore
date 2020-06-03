@@ -4,7 +4,8 @@
 # TODO: 
 
 export Transform2D
-export obj2world, world2obj, translate!, rotate!, scale!, parent!, deparent!, getcustomdata, transformfamily, transformparam
+export obj2world, world2obj, translate!, rotate!, scale!, parent!, deparent!
+export transformof, transformfamily, transformchaintype, transformparam
 export translationmatrix3, rotationmatrix3, scalematrix3, transformmatrix3
 
 mutable struct Transform2D{E, T} <: AbstractTransform2D{E, T}
