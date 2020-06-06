@@ -36,6 +36,9 @@ end
 translate!(transform::AbstractTransform, offset)  = transform.location = transform.location .+ offset
 scale!(    transform::AbstractTransform, scale)   = transform.scale = transform.scale .* scale
 rotate!(transform::AbstractTransform2D, rotation) = transform.rotation += rotation
+translate!(elem, offset)   = translate!(transformof(elem), offset)
+scale!(    elem, scale)    = scale!(    transformof(elem), scale)
+rotate!(   elem, rotation) = rotate!(   transformof(elem), rotation)
 
 function change!(transform::Transform2D{E, T}, location::Vector2{T}, rotation::T, scale::Vector2{T}) where {E, T}
     transform.location = location
