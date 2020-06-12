@@ -42,21 +42,21 @@ Hook the specified listener for a single call. Afterwards, automaticaly `unhook!
 function hookonce!(listener, disp, sym::Symbol, largs...; lkwargs...)
     wrapper = (args...; kwargs...) -> begin
         unhook!(disp, sym, wrapper)
-        listener(args...; kwargs...)
+        listener(largs..., args...; lkwargs..., kwargs...)
     end
-    hook!((wrapper, largs, lkwargs), disp, sym)
+    hook!(wrapper, disp, sym)
 end
 
 """
 Remove a previously registered hooked event listener.
 As anonymous functions are unique `unhook` cannot be used with the `unhook!(<...>) do <...>` syntax.
 """
-function unhook!(disp, sym::Symbol, listener)
+function unhook!(disp, sym::Symbol, listener, largs...; lkwargs...)
     listeners = eventlisteners(disp)
     if haskey(listeners, sym)
-        idx = findfirst((curr)->curr[1] == listener, listeners[sym])
-        if idx != nothing
-            deleteat!(listeners[sym], idx)
+        filter!(listeners[sym]) do curr
+            # TODO: Is there an efficient way to also check for kwargs? SHOULD we check for kwargs??
+            !(curr[1] == listener && curr[2] == largs)
         end
     end
     disp
