@@ -27,24 +27,24 @@ eventlisteners(disp::EventDispatcher) = disp.listeners
 Hook the specified listener. Whether the same listener may be hooked (and called) more than once depends on the
 implementation.
 """
-function hook!(listener, disp, sym::Symbol)
+function hook!(listener, disp, sym::Symbol, args...; kwargs...)
     listeners = eventlisteners(disp)
     if !haskey(listeners, sym)
         listeners[sym] = Any[]
     end
-    push!(listeners[sym], listener)
+    push!(listeners[sym], (listener, args, kwargs))
     disp
 end
 
 """
 Hook the specified listener for a single call. Afterwards, automaticaly `unhook!`.
 """
-function hookonce!(listener, disp, sym::Symbol)
+function hookonce!(listener, disp, sym::Symbol, largs...; lkwargs...)
     wrapper = (args...; kwargs...) -> begin
         unhook!(disp, sym, wrapper)
-        listener(args..., kwargs...)
+        listener(args...; kwargs...)
     end
-    hook!(wrapper, disp, sym)
+    hook!((wrapper, largs, lkwargs), disp, sym)
 end
 
 """
@@ -54,7 +54,7 @@ As anonymous functions are unique `unhook` cannot be used with the `unhook!(<...
 function unhook!(disp, sym::Symbol, listener)
     listeners = eventlisteners(disp)
     if haskey(listeners, sym)
-        idx = findfirst(curr->curr == listener, listeners[sym])
+        idx = findfirst((curr)->curr[1] == listener, listeners[sym])
         if idx != nothing
             deleteat!(listeners[sym], idx)
         end
@@ -73,8 +73,8 @@ function emit(::IsEventDispatcher, disp, sym::Symbol, args...; kwargs...)
     listeners = eventlisteners(disp)
     results = Vector(undef, length(listeners))
     if haskey(listeners, sym)
-        for listener ∈ listeners[sym]
-            push!(results, listener(args...; kwargs...))
+        for (listener, largs, lkwargs) ∈ listeners[sym]
+            push!(results, listener(largs..., args...; lkwargs..., kwargs...))
         end
     end
     results
