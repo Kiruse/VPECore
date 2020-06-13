@@ -6,11 +6,13 @@ using GetSetProp
 
 export tick!, update!, change!
 
+include("./Errors.jl")
 include("./Abstracts.jl")
 include("./SigUtils.jl")
 include("./EventDispatcher.jl")
 
 include("./AABBs.jl")
+include("./DictUtils.jl")
 include("./LinAl.jl")
 include("./LoopUtils.jl")
 include("./Measures.jl")
